@@ -134,12 +134,21 @@ var Autocomplete = React.createClass({
     }
   },
 
+  prevKeyDownTime: 0,
+  
   keyDownHandlers: {
     ArrowDown: function ArrowDown(event) {
       event.preventDefault();
       var itemsLength = this.getFilteredItems().length;
       if (!itemsLength) return;
       var highlightedIndex = this.state.highlightedIndex;
+      
+      // macOS Chrome에서 조합형 한글 상태에서 화살표키 눌렀을 때, 이벤트가 2번 발생한다.
+      // 사용자가 빠르게 방향키를 연타할 경우 시간 간격은 약 100 - 200 ms 였다.
+      // TODO 이것은 하드코딩이므로 해결책이 생기면 수정할 것.
+      var keyDownDiff = Date.now() - this.prevKeyDownTime;
+      if (keyDownDiff < 50) return;
+      this.prevKeyDownTime = Date.now();
 
       var index = highlightedIndex === null || highlightedIndex === itemsLength - 1 ? 0 : highlightedIndex + 1;
       this._performAutoCompleteOnKeyUp = true;
@@ -154,6 +163,13 @@ var Autocomplete = React.createClass({
       var itemsLength = this.getFilteredItems().length;
       if (!itemsLength) return;
       var highlightedIndex = this.state.highlightedIndex;
+      
+      // macOS Chrome에서 조합형 한글 상태에서 화살표키 눌렀을 때, 이벤트가 2번 발생한다.
+      // 사용자가 빠르게 방향키를 연타할 경우 시간 간격은 약 100 - 200 ms 였다.
+      // TODO 이것은 하드코딩이므로 해결책이 생기면 수정할 것.
+      var keyDownDiff = Date.now() - this.prevKeyDownTime;
+      if (keyDownDiff < 50) return;
+      this.prevKeyDownTime = Date.now();
 
       var index = highlightedIndex === 0 || highlightedIndex === null ? itemsLength - 1 : highlightedIndex - 1;
       this._performAutoCompleteOnKeyUp = true;
@@ -173,8 +189,6 @@ var Autocomplete = React.createClass({
         // input has focus but no menu item is selected + enter is hit -> close the menu, highlight whatever's in input
         this.setState({
           isOpen: false
-        }, function () {
-          _this.refs.input.select();
         });
       } else {
         // text entered + menu item has been highlighted + enter is hit -> update value to that of selected menu item, close the menu
