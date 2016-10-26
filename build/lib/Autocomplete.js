@@ -56,8 +56,9 @@ var Autocomplete = React.createClass({
         background: 'rgba(255, 255, 255, 0.9)',
         padding: '2px 0',
         fontSize: '90%',
-        position: 'fixed',
+        position: 'absolute',
         overflow: 'auto',
+        zIndex: '500',
         maxHeight: '50%' },
       // TODO: don't cheat, let it flow to the bottom
       autoHighlight: true,
@@ -76,6 +77,14 @@ var Autocomplete = React.createClass({
     this._ignoreBlur = false;
     this._performAutoCompleteOnUpdate = false;
     this._performAutoCompleteOnKeyUp = false;
+  },
+
+  handleResize() {
+    if (this.state.isOpen) this.setMenuPositions();
+  },
+
+  componentDidMount() {
+    window.addEventListener('resize', this.handleResize);
   },
 
   componentWillReceiveProps: function componentWillReceiveProps(nextProps) {
@@ -134,12 +143,21 @@ var Autocomplete = React.createClass({
     }
   },
 
+  prevKeyDownTime: 0,
+  
   keyDownHandlers: {
     ArrowDown: function ArrowDown(event) {
       event.preventDefault();
       var itemsLength = this.getFilteredItems().length;
       if (!itemsLength) return;
       var highlightedIndex = this.state.highlightedIndex;
+      
+      // macOS Chrome에서 조합형 한글 상태에서 화살표키 눌렀을 때, 이벤트가 2번 발생한다.
+      // 사용자가 빠르게 방향키를 연타할 경우 시간 간격은 약 100 - 200 ms 였다.
+      // TODO 이것은 하드코딩이므로 해결책이 생기면 수정할 것.
+      var keyDownDiff = Date.now() - this.prevKeyDownTime;
+      if (keyDownDiff < 50) return;
+      this.prevKeyDownTime = Date.now();
 
       var index = highlightedIndex === null || highlightedIndex === itemsLength - 1 ? 0 : highlightedIndex + 1;
       this._performAutoCompleteOnKeyUp = true;
@@ -154,6 +172,13 @@ var Autocomplete = React.createClass({
       var itemsLength = this.getFilteredItems().length;
       if (!itemsLength) return;
       var highlightedIndex = this.state.highlightedIndex;
+      
+      // macOS Chrome에서 조합형 한글 상태에서 화살표키 눌렀을 때, 이벤트가 2번 발생한다.
+      // 사용자가 빠르게 방향키를 연타할 경우 시간 간격은 약 100 - 200 ms 였다.
+      // TODO 이것은 하드코딩이므로 해결책이 생기면 수정할 것.
+      var keyDownDiff = Date.now() - this.prevKeyDownTime;
+      if (keyDownDiff < 50) return;
+      this.prevKeyDownTime = Date.now();
 
       var index = highlightedIndex === 0 || highlightedIndex === null ? itemsLength - 1 : highlightedIndex - 1;
       this._performAutoCompleteOnKeyUp = true;
@@ -173,8 +198,6 @@ var Autocomplete = React.createClass({
         // input has focus but no menu item is selected + enter is hit -> close the menu, highlight whatever's in input
         this.setState({
           isOpen: false
-        }, function () {
-          _this.refs.input.select();
         });
       } else {
         // text entered + menu item has been highlighted + enter is hit -> update value to that of selected menu item, close the menu
@@ -232,6 +255,14 @@ var Autocomplete = React.createClass({
     if (itemValueDoesMatch && highlightedIndex === null) this.setState({ highlightedIndex: 0 });
   },
 
+  getDocumentHeight: function () {
+    var body = document.body,
+        html = document.documentElement;
+
+    return Math.max(body.scrollHeight, body.offsetHeight, 
+                    html.clientHeight, html.scrollHeight, html.offsetHeight );
+  },
+
   setMenuPositions: function setMenuPositions() {
     var node = this.refs.input;
     var rect = node.getBoundingClientRect();
@@ -239,8 +270,11 @@ var Autocomplete = React.createClass({
     var marginBottom = parseInt(computedStyle.marginBottom, 10) || 0;
     var marginLeft = parseInt(computedStyle.marginLeft, 10) || 0;
     var marginRight = parseInt(computedStyle.marginRight, 10) || 0;
+
+    var menuTop = rect.bottom + marginBottom + window.scrollY;
+
     this.setState({
-      menuTop: rect.bottom + marginBottom,
+      menuTop: menuTop,
       menuLeft: rect.left + marginLeft,
       menuWidth: rect.width + marginLeft + marginRight
     });
