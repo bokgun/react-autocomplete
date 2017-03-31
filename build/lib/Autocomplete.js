@@ -79,11 +79,11 @@ var Autocomplete = React.createClass({
     this._performAutoCompleteOnKeyUp = false;
   },
 
-  handleResize() {
+  handleResize: function handleResize() {
     if (this.state.isOpen) this.setMenuPositions();
   },
 
-  componentDidMount() {
+  componentDidMount: function componentDidMount() {
     window.addEventListener('resize', this.handleResize);
   },
 
